@@ -32,15 +32,23 @@ defmodule Soap.Response.Parser do
   end
 
   @spec parse_record(tuple()) :: map() | String.t()
-  defp parse_record({:xmlElement, tag_name, _, _, _, _, _, _, elements, _, _, _}) do
-    %{tag_name => parse_elements(elements)}
+  defp parse_record({:xmlElement, :value, :value, _nsinfo, _namespace, _parents, _pos, attributes, elements, _language, _xmlbase, _elementdef}) do
+    parse_elements(elements)
+  end
+  defp parse_record({:xmlElement, tag_name, _expanded_name, _nsinfo, _namespace, _parents, _pos, attributes, elements, _language, _xmlbase, _elementdef}) do
+    %{tag_name => %{attributes: Enum.map(attributes, &simplify_attribute/1), value: parse_elements(elements)}}
   end
 
   defp parse_record({:xmlText, _, _, _, value, _}), do: transform_record_value(value)
 
+  defp simplify_attribute({:xmlAttribute, name, _expanded_name, _nsinfo, _namespace, _parents, _pos, _language, value, _normalized}) do
+    {name, transform_record_value(value)}
+  end
+
   defp transform_record_value(nil), do: nil
   defp transform_record_value(value) when is_list(value), do: value |> to_string() |> String.trim()
   defp transform_record_value(value) when is_binary(value), do: value |> String.trim()
+  defp transform_record_value(other), do: other
 
   @spec parse_elements(list() | tuple()) :: map()
   defp parse_elements([]), do: %{}
